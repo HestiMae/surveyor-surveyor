@@ -1,0 +1,25 @@
+plugins {
+    id 'java'
+    id 'application'
+    id 'com.github.johnrengelman.shadow' version '8.1.1'
+}
+
+group 'garden.hestia'
+version = "$project.baseVersion"
+
+sourceCompatibility = 17
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+}
+
+application {
+    mainClass.set("garden.hestia.surveyor_surveyor.SurveyorSurveyor")
+}
+
+shadowJar {
+    minimize()
+}
