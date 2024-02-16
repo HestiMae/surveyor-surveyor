@@ -21,10 +21,28 @@ public class SurveyorSurveyor {
         CompoundTag nbt = NBTIO.readFile(file, true, false);
 
         int[] blockColors = (int[]) nbt.get("blockColors").getValue();
-
+        CompoundTag chunksCompound = nbt.get("chunks");
         BufferedImage image = new BufferedImage(512, 512, Image.SCALE_REPLICATE);
-        for (int i = 0; i < blockColors.length; i++) {
-            image.setRGB(i, 0, blockColors[i]);
+        for (String worldChunkPosString : chunksCompound.keySet()) {
+            int worldChunkX = Integer.parseInt(worldChunkPosString.split(",")[0]);
+            int worldChunkZ = Integer.parseInt(worldChunkPosString.split(",")[1]);
+            int regionChunkX = worldChunkX & 31; //mod 32
+            int regionChunkZ = worldChunkZ & 31;
+            CompoundTag chunkCompound = chunksCompound.get(worldChunkPosString);
+            CompoundTag layersCompound = chunkCompound.get("layers");
+            // rewrite for multiple images, hardcode 0 atm
+            CompoundTag layerCompound = layersCompound.get("62");
+            int[] block = readUInts(layerCompound.get("block"));
+            int[] height = readUInts(layerCompound.get("height"));
+            for (int i = 0; i < block.length; i++) {
+                if (height[i] == -1) continue;
+                int chunkBlockX = i >> 4; // divide 16
+                int chunkBlockZ = i & 15; //mod 16
+                int imageX = regionChunkX * 16 + chunkBlockX;
+                int imageZ = regionChunkZ * 16 + chunkBlockZ;
+                int color = blockColors[block[i]];
+                image.setRGB(imageX, imageZ, color);
+            }
         }
         ImageIO.write(image, "png", new File(file.getPath().replace(".dat", ".png")));
 
