@@ -11,9 +11,11 @@ sourceCompatibility = 17
 
 repositories {
     mavenCentral()
+    maven { url "https://repo.opencollab.dev/maven-releases" }
 }
 
 dependencies {
+    implementation "com.github.steveice10:opennbt:1.6"
 }
 
 application {
