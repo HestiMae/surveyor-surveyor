@@ -4,22 +4,20 @@ import com.github.steveice10.opennbt.NBTIO;
 import com.github.steveice10.opennbt.tag.builtin.*;
 
 import javax.imageio.ImageIO;
-import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.IntStream;
 
 public class SurveyorSurveyor {
     public static final int UINT_OFFSET = 127;
     public static void main(String[] args) throws IOException {
         String filename = args[0];
+        int heightLimit = Integer.parseInt(args[1]);
         File file =  new File(filename);
         CompoundTag nbt = NBTIO.readFile(file, true, false);
+        BufferedImage combinedImage = new BufferedImage(512, 512, BufferedImage.TYPE_INT_ARGB);
         Map<String, BufferedImage> seenLayers = new HashMap<>();
         int[] blockColors = (int[]) nbt.get("blockColors").getValue();
         CompoundTag chunksCompound = nbt.get("chunks");
@@ -30,8 +28,8 @@ public class SurveyorSurveyor {
             int regionChunkZ = worldChunkZ & 31;
             CompoundTag chunkCompound = chunksCompound.get(worldChunkPosString);
             CompoundTag layersCompound = chunkCompound.get("layers");
-            for (String layer : layersCompound.keySet()) {
-                seenLayers.putIfAbsent(layer, new BufferedImage(512, 512, Image.SCALE_REPLICATE));
+            for (String layer : layersCompound.keySet().stream().sorted(Comparator.comparingInt(Integer::parseInt)).toList()) {
+                seenLayers.putIfAbsent(layer, new BufferedImage(512, 512, BufferedImage.TYPE_INT_ARGB));
                 CompoundTag layerCompound = layersCompound.get(layer);
                 int[] block = readUInts(layerCompound.get("block"));
                 int[] depth = readUInts(layerCompound.get("depth"));
@@ -42,7 +40,8 @@ public class SurveyorSurveyor {
                     int imageX = regionChunkX * 16 + chunkBlockX;
                     int imageZ = regionChunkZ * 16 + chunkBlockZ;
                     int color = blockColors[block[i]];
-                    seenLayers.get(layer).setRGB(imageX, imageZ, color);
+                    seenLayers.get(layer).setRGB(imageX, imageZ, color | 0xFF000000);
+                    if (Integer.parseInt(layer) <= heightLimit) combinedImage.setRGB(imageX, imageZ, color | 0xFF000000);
                 }
             }
         }
@@ -53,6 +52,7 @@ public class SurveyorSurveyor {
                 throw new RuntimeException(e);
             }
         });
+        ImageIO.write(combinedImage, "png", new File(file.getPath().replace(".dat", "-combined.png")));
         System.out.println(Arrays.toString(blockColors));
     }
 
