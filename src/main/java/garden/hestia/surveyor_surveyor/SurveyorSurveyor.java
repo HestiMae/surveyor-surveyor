@@ -12,6 +12,8 @@ import java.util.stream.IntStream;
 
 public class SurveyorSurveyor {
     public static final int UINT_OFFSET = 127;
+    private static final boolean BIOME_WATER = false;
+    private static final int WATER_MAP_COLOR = 0x4040ff;
 
     public static void main(String[] args) throws IOException {
         String filename = args[0];
@@ -44,10 +46,16 @@ public class SurveyorSurveyor {
                     int imageX = regionChunkX * 16 + chunkBlockX;
                     int imageZ = regionChunkZ * 16 + chunkBlockZ;
                     int color = blockColors[block[i]];
-                    if (water[i] > 0) color = biomeWater[biome[i]];
-                    seenLayers.get(layer).setRGB(imageX, imageZ, color | 0xFF000000);
+                    Brightness brightness = Brightness.NORMAL;
+                    if (water[i] > 0)
+                    {
+                        color = BIOME_WATER ? biomeWater[biome[i]] : WATER_MAP_COLOR;
+                        brightness = getBrightnessFromDepth(depth[i], chunkBlockX, chunkBlockZ);
+                    }
+                    color = getRenderColor(brightness, color);
+                    seenLayers.get(layer).setRGB(imageX, imageZ, color);
                     if (Integer.parseInt(layer) <= heightLimit)
-                        combinedImage.setRGB(imageX, imageZ, color | 0xFF000000);
+                        combinedImage.setRGB(imageX, imageZ, color);
                 }
             }
         }
@@ -92,10 +100,34 @@ public class SurveyorSurveyor {
 
     public static int getRenderColor(Brightness brightness, int color) {
         int i = brightness.brightness;
-        int j = (color >> 16 & 0xFF) * i / 255;
-        int k = (color >> 8 & 0xFF) * i / 255;
-        int l = (color & 0xFF) * i / 255;
-        return 0xFF000000 | l << 16 | k << 8 | j;
+        int r = (color >> 16 & 0xFF) * i / 255;
+        int g = (color >> 8 & 0xFF) * i / 255;
+        int b = (color & 0xFF) * i / 255;
+        return 0xFF000000 | r << 16 | g << 8 | b;
+    }
+    public static Brightness getBrightnessFromDepth(int depth, int x, int z)
+    {
+        boolean ditherBright = (x + z) % 2 == 0;
+        if (depth <= 2)
+        {
+            return Brightness.HIGH;
+        }
+        else if (depth <= 4)
+        {
+            return ditherBright ? Brightness.HIGH : Brightness.NORMAL;
+        }
+        else if (depth <= 6)
+        {
+            return Brightness.NORMAL;
+        }
+        else if (depth <= 9)
+        {
+            return ditherBright ? Brightness.NORMAL : Brightness.LOW;
+        }
+        else
+        {
+            return Brightness.LOW;
+        }
     }
 
     public enum Brightness {
