@@ -105,28 +105,21 @@ public class SurveyorSurveyor {
         int b = (color & 0xFF) * i / 255;
         return 0xFF000000 | r << 16 | g << 8 | b;
     }
-    public static Brightness getBrightnessFromDepth(int depth, int x, int z)
-    {
-        boolean ditherBright = (x + z) % 2 == 0;
-        if (depth <= 2)
-        {
-            return Brightness.HIGH;
+
+    /**
+     * @author ampflower
+     */
+    private static Brightness getBrightnessFromDepth(int depth, int x, int z) {
+        if (depth == 6) { // Emulate floating point error in vanilla code
+            depth = 7;
         }
-        else if (depth <= 4)
-        {
-            return ditherBright ? Brightness.HIGH : Brightness.NORMAL;
-        }
-        else if (depth <= 6)
-        {
-            return Brightness.NORMAL;
-        }
-        else if (depth <= 9)
-        {
-            return ditherBright ? Brightness.NORMAL : Brightness.LOW;
-        }
-        else
-        {
+        int ditheredDepth = depth + (((x ^ z) & 1) << 1);
+        if (ditheredDepth > 8) {
             return Brightness.LOW;
+        } else if (ditheredDepth >= 4) {
+            return Brightness.NORMAL;
+        } else {
+            return Brightness.HIGH;
         }
     }
 
