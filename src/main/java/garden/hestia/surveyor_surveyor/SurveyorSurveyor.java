@@ -39,6 +39,7 @@ public class SurveyorSurveyor {
                 int[] block = unmaskUInts(readUInts(layerCompound.get("block"), 0), depth);
                 int[] biome = unmaskUInts(readUInts(layerCompound.get("biome"), 0), depth);
                 int[] water = unmaskUInts(readUInts(layerCompound.get("water"), 0), depth);
+                int prevDepth = 0;
                 for (int i = 0; i < block.length; i++) {
                     if (depth[i] == -1) continue;
                     int chunkBlockX = i >> 4; // divide 16
@@ -52,6 +53,11 @@ public class SurveyorSurveyor {
                         color = BIOME_WATER ? biomeWater[biome[i]] : WATER_MAP_COLOR;
                         brightness = getBrightnessFromDepth(depth[i], chunkBlockX, chunkBlockZ);
                     }
+                    else {
+                        if (prevDepth < depth[i]) brightness = Brightness.LOW;
+                        if (prevDepth > depth[i]) brightness = Brightness.HIGH;
+                    }
+                    prevDepth = depth[i];
                     color = getRenderColor(brightness, color);
                     seenLayers.get(layer).setRGB(imageX, imageZ, color);
                     if (Integer.parseInt(layer) <= heightLimit)
