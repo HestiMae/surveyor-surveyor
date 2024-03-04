@@ -36,22 +36,22 @@ public class SurveyorSurveyor {
             for (String layer : layersCompound.keySet().stream().sorted(Comparator.comparingInt(Integer::parseInt)).toList()) {
                 layerData.putIfAbsent(Integer.parseInt(layer), new Layer(512, Integer.parseInt(layer)));
                 CompoundTag layerCompound = layersCompound.get(layer);
-                int[] depth = readUInts(layerCompound.get("depth"), -1);
-                int[] block = unmaskUInts(readUInts(layerCompound.get("block"), 0), depth);
-                int[] biome = unmaskUInts(readUInts(layerCompound.get("biome"), 0), depth);
-                int[] light = unmaskUInts(readUInts(layerCompound.get("light"), 0), depth);
-                int[] water = unmaskUInts(readUInts(layerCompound.get("water"), 0), depth);
+                int[] depth = extendUInts(readVarUInts(layerCompound.get("depth"), -1), -1);
+                int[] block = extendUInts(unmaskUInts(readVarUInts(layerCompound.get("block"), 0), depth), 0);
+                int[] biome = extendUInts(unmaskUInts(readVarUInts(layerCompound.get("biome"), 0), depth), 0);
+                int[] light = extendUInts(unmaskUInts(readVarUInts(layerCompound.get("light"), 0), depth), 0);
+                int[] water = extendUInts(unmaskUInts(readVarUInts(layerCompound.get("water"), 0), depth), 0);
                 layerData.get(Integer.parseInt(layer)).putChunk(regionChunkX, regionChunkZ, depth, block, biome, light, water);
             }
         }
-        for (Integer layerHeight : layerData.keySet().stream().sorted(Comparator.comparingInt(i -> i)).toList()) {
+        List<Integer> sortedKeys = layerData.keySet().stream().mapToInt(i -> i).boxed().sorted(Comparator.reverseOrder()).toList();
+        for (Integer layerHeight : sortedKeys) {
             seenLayers.put(layerHeight, new BufferedImage(512, 512, BufferedImage.TYPE_INT_ARGB));
             Layer layer = layerData.get(layerHeight);
             int[][] colors = layer.getARGB(blockColors, biomeWater);
             for (int x = 0; x < colors.length; x++) {
                 for (int z = 0; z < colors[x].length; z++) {
                     if (colors[x][z] == 0) continue;
-                    combinedImage.setRGB(x, z, colors[x][z]);
                     seenLayers.get(layerHeight).setRGB(x, z, colors[x][z]);
                 }
             }
@@ -63,8 +63,19 @@ public class SurveyorSurveyor {
                 throw new RuntimeException(e);
             }
         });
+        Layer topLayer = layerData.get(sortedKeys.get(0));
+        for (Integer layer : sortedKeys)
+        {
+            topLayer.fillEmptyFloors(topLayer.y - layerData.get(layer).y,layerData.get(layer).y - heightLimit, Integer.MAX_VALUE, layerData.get(layer));
+        }
+        int[][] colors = topLayer.getARGB(blockColors, biomeWater);
+        for (int i = 0; i < colors.length; i++) {
+            for (int j = 0; j < colors.length; j++) {
+                if (colors[i][j] == 0) continue;
+                combinedImage.setRGB(i, j, colors[i][j]);
+            }
+        }
         ImageIO.write(combinedImage, "png", new File(file.getPath().replace(".dat", "-combined.png")));
-        System.out.println(Arrays.toString(blockColors));
     }
 
     public static int[] unmaskUInts(int[] array, int[] mask) {
@@ -80,7 +91,15 @@ public class SurveyorSurveyor {
         return newArray;
     }
 
-    public static int[] readUInts(Tag nbt, int defaultValue) {
+    public static int[] extendUInts(int[] varArray, int defaultValue) {
+        int[] outArray = Collections.nCopies(256, defaultValue).stream().mapToInt(i -> i).toArray();
+        if (varArray.length == 256) return varArray;
+        System.arraycopy(varArray, 0, outArray, 0, varArray.length);
+        return outArray;
+    }
+
+    public static int[] readVarUInts(Tag nbt, int defaultValue)
+    {
         if (nbt == null) return Collections.nCopies(256, defaultValue).stream().mapToInt(i -> i).toArray();
         if (nbt.getClass().equals(ByteTag.class)) {
             return Collections.nCopies(256, ((ByteTag) nbt).getValue().intValue() + UINT_OFFSET).stream().mapToInt(i -> i).toArray();

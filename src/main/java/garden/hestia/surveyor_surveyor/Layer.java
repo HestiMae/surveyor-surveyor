@@ -48,7 +48,7 @@ public class Layer {
                 SurveyorSurveyor.Brightness brightness = SurveyorSurveyor.Brightness.NORMAL;
                 if (water[x][z] > 0) {
                     color = BIOME_WATER ? biomeWater[biome[x][z]] : WATER_MAP_COLOR;
-                    brightness = getBrightnessFromDepth(depth[x][z], x, z);
+                    brightness = getBrightnessFromDepth(water[x][z], x, z);
                 } else if (z > 0){
                     if (depth[x][z-1] < depth[x][z]) brightness = SurveyorSurveyor.Brightness.LOW;
                     if (depth[x][z-1] > depth[x][z]) brightness = SurveyorSurveyor.Brightness.HIGH;
@@ -57,5 +57,21 @@ public class Layer {
             }
         }
         return colors;
+    }
+    public void fillEmptyFloors(int depthOffset, int minDepth, int maxDepth, Layer layer)
+    {
+        for (int i = 0; i < 512; i++)
+        {
+            for (int j = 0; j < 512; j++) {
+                if (this.depth[i][j] == -1 && layer.depth[i][j] != -1 && layer.depth[i][j] <= maxDepth && layer.depth[i][j] >= minDepth)
+                {
+                    this.depth[i][j] = layer.depth[i][j] + depthOffset;
+                    this.block[i][j] = layer.block[i][j];
+                    this.biome[i][j] = layer.biome[i][j];
+                    this.light[i][j] = layer.light[i][j];
+                    this.water[i][j] = layer.water[i][j];
+                }
+            }
+        }
     }
 }
