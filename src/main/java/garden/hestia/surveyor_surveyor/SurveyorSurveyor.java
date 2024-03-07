@@ -126,13 +126,13 @@ public class SurveyorSurveyor {
      * @author ampflower
      */
     static Brightness getBrightnessFromDepth(int depth, int x, int z) {
-        if (depth == 6) { // Emulate floating point error in vanilla code
-            depth = 7;
+        if (depth == 7) { // Emulate floating point error in vanilla code
+            depth = 8;
         }
         int ditheredDepth = depth + (((x ^ z) & 1) << 1);
-        if (ditheredDepth > 8) {
+        if (ditheredDepth > 9) {
             return Brightness.LOW;
-        } else if (ditheredDepth >= 4) {
+        } else if (ditheredDepth >= 5) {
             return Brightness.NORMAL;
         } else {
             return Brightness.HIGH;
