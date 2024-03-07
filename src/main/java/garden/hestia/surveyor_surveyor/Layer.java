@@ -39,7 +39,7 @@ public class Layer {
         return y - depth[x][z];
     }
 
-    int[][] getARGB(int[] blockColors, int[] biomeWater ) {
+    int[][] getARGB(int[] blockColors, int[] biomeWater, int[] biomeGrass, String[] blocks) {
         int[][] colors = new int[512][512];
         for (int x = 0; x < 512; x++) {
             for (int z = 0; z < 512; z++) {
@@ -49,22 +49,25 @@ public class Layer {
                 if (water[x][z] > 0) {
                     color = BIOME_WATER ? biomeWater[biome[x][z]] : WATER_MAP_COLOR;
                     brightness = getBrightnessFromDepth(water[x][z], x, z);
-                } else if (z > 0){
-                    if (depth[x][z-1] < depth[x][z]) brightness = SurveyorSurveyor.Brightness.LOW;
-                    if (depth[x][z-1] > depth[x][z]) brightness = SurveyorSurveyor.Brightness.HIGH;
+                } else {
+                    if (BIOME_GRASS && blocks[block[x][z]].equals("minecraft:grass_block")) {
+                        color = biomeGrass[biome[x][z]];
+                    }
+                    if (z > 0) {
+                        if (depth[x][z - 1] < depth[x][z]) brightness = SurveyorSurveyor.Brightness.LOW;
+                        if (depth[x][z - 1] > depth[x][z]) brightness = SurveyorSurveyor.Brightness.HIGH;
+                    }
                 }
-                 colors[x][z] = getRenderColor(brightness, color);
+                colors[x][z] = getRenderColor(brightness, color);
             }
         }
         return colors;
     }
-    public void fillEmptyFloors(int depthOffset, int minDepth, int maxDepth, Layer layer)
-    {
-        for (int i = 0; i < 512; i++)
-        {
+
+    public void fillEmptyFloors(int depthOffset, int minDepth, int maxDepth, Layer layer) {
+        for (int i = 0; i < 512; i++) {
             for (int j = 0; j < 512; j++) {
-                if (this.depth[i][j] == -1 && layer.depth[i][j] != -1 && layer.depth[i][j] <= maxDepth && layer.depth[i][j] >= minDepth)
-                {
+                if (this.depth[i][j] == -1 && layer.depth[i][j] != -1 && layer.depth[i][j] <= maxDepth && layer.depth[i][j] >= minDepth) {
                     this.depth[i][j] = layer.depth[i][j] + depthOffset;
                     this.block[i][j] = layer.block[i][j];
                     this.biome[i][j] = layer.biome[i][j];
