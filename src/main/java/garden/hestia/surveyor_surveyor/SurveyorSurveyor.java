@@ -15,6 +15,9 @@ public class SurveyorSurveyor {
     static final boolean BIOME_WATER = true;
     static final int WATER_MAP_COLOR = 0x4040ff;
     static final boolean BIOME_GRASS = true;
+    static final boolean BIOME_FOLIAGE = true;
+    static final List<String> FOLIAGE_BLOCKS = List.of("minecraft:oak_leaves", "minecraft:jungle_leaves",
+            "minecraft:acacia_leaves", "minecraft:dark_oak_leaves", "minecraft:mangrove_leaves", "minecraft:vine");
 
     public static void main(String[] args) throws IOException {
         String filename = args[0];
@@ -27,6 +30,7 @@ public class SurveyorSurveyor {
         int[] blockColors = (int[]) nbt.get("blockColors").getValue();
         int[] biomeWater = (int[]) nbt.get("biomeWater").getValue();
         int[] biomeGrass = (int[]) nbt.get("biomeGrass").getValue();
+        int[] biomeFoliage = (int[]) nbt.get("biomeFoliage").getValue();
         String[] blocks = ((List<Tag>) nbt.get("blocks").getValue()).stream().map(tag -> (String) tag.getValue()).toArray(String[]::new);
 
         CompoundTag chunksCompound = nbt.get("chunks");
@@ -52,7 +56,7 @@ public class SurveyorSurveyor {
         for (Integer layerHeight : sortedKeys) {
             seenLayers.put(layerHeight, new BufferedImage(512, 512, BufferedImage.TYPE_INT_ARGB));
             Layer layer = layerData.get(layerHeight);
-            int[][] colors = layer.getARGB(blockColors, biomeWater, biomeGrass, blocks);
+            int[][] colors = layer.getARGB(blockColors, biomeWater, biomeGrass, biomeFoliage, blocks);
             for (int x = 0; x < colors.length; x++) {
                 for (int z = 0; z < colors[x].length; z++) {
                     if (colors[x][z] == 0) continue;
@@ -72,7 +76,7 @@ public class SurveyorSurveyor {
         {
             topLayer.fillEmptyFloors(topLayer.y - layerData.get(layer).y,layerData.get(layer).y - heightLimit, Integer.MAX_VALUE, layerData.get(layer));
         }
-        int[][] colors = topLayer.getARGB(blockColors, biomeWater, biomeGrass, blocks);
+        int[][] colors = topLayer.getARGB(blockColors, biomeWater, biomeGrass, biomeFoliage, blocks);
         for (int i = 0; i < colors.length; i++) {
             for (int j = 0; j < colors.length; j++) {
                 if (colors[i][j] == 0) continue;

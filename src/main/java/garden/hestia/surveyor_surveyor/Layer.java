@@ -39,7 +39,7 @@ public class Layer {
         return y - depth[x][z];
     }
 
-    int[][] getARGB(int[] blockColors, int[] biomeWater, int[] biomeGrass, String[] blocks) {
+    int[][] getARGB(int[] blockColors, int[] biomeWater, int[] biomeGrass, int[] biomeFoliage, String[] blocks) {
         int[][] colors = new int[512][512];
         for (int x = 0; x < 512; x++) {
             for (int z = 0; z < 512; z++) {
@@ -52,6 +52,10 @@ public class Layer {
                 } else {
                     if (BIOME_GRASS && blocks[block[x][z]].equals("minecraft:grass_block")) {
                         color = biomeGrass[biome[x][z]];
+                    }
+                    if (BIOME_FOLIAGE && FOLIAGE_BLOCKS.contains(blocks[block[x][z]]))
+                    {
+                        color = biomeFoliage[biome[x][z]];
                     }
                     if (z > 0) {
                         if (depth[x][z - 1] < depth[x][z]) brightness = SurveyorSurveyor.Brightness.LOW;
