@@ -4,10 +4,12 @@ import com.github.steveice10.opennbt.NBTIO;
 import com.github.steveice10.opennbt.tag.builtin.*;
 
 import javax.imageio.ImageIO;
+import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
+import java.util.List;
 import java.util.stream.IntStream;
 
 public class SurveyorSurveyor {
@@ -18,6 +20,8 @@ public class SurveyorSurveyor {
     static final boolean BIOME_FOLIAGE = true;
     static final List<String> FOLIAGE_BLOCKS = List.of("minecraft:oak_leaves", "minecraft:jungle_leaves",
             "minecraft:acacia_leaves", "minecraft:dark_oak_leaves", "minecraft:mangrove_leaves", "minecraft:vine");
+    static final List<String> GRASS_BLOCKS = List.of("minecraft:grass_block", "minecraft:grass", "minecraft:tall_grass",
+            "minecraft:fern", "minecraft:potted_fern", "minecraft:large_fern", "minecraft:sugar_cane");
 
     public static void main(String[] args) throws IOException {
         String filename = args[0];
@@ -128,6 +132,17 @@ public class SurveyorSurveyor {
         int g = (color >> 8 & 0xFF) * i / 255;
         int b = (color & 0xFF) * i / 255;
         return 0xFF000000 | r << 16 | g << 8 | b;
+    }
+
+    public static int tintColor(int base, int tint)
+    {
+        Color baseColor = new Color(base);
+        Color tintColor = new Color(tint);
+        return Color.getHSBColor(
+                Color.RGBtoHSB(tintColor.getRed(), tintColor.getGreen(), tintColor.getBlue(), new float[3])[0],
+                Color.RGBtoHSB(baseColor.getRed(), baseColor.getGreen(), baseColor.getBlue(), new float[3])[1],
+                Color.RGBtoHSB(baseColor.getRed(), baseColor.getGreen(), baseColor.getBlue(), new float[3])[2]
+                ).getRGB();
     }
 
     /**

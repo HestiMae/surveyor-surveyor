@@ -50,12 +50,12 @@ public class Layer {
                     color = BIOME_WATER ? biomeWater[biome[x][z]] : WATER_MAP_COLOR;
                     brightness = getBrightnessFromDepth(water[x][z], x, z);
                 } else {
-                    if (BIOME_GRASS && blocks[block[x][z]].equals("minecraft:grass_block")) {
-                        color = biomeGrass[biome[x][z]];
+                    if (BIOME_GRASS && GRASS_BLOCKS.contains(blocks[block[x][z]])) {
+                        color = SurveyorSurveyor.tintColor(color, biomeGrass[biome[x][z]]);
                     }
-                    if (BIOME_FOLIAGE && FOLIAGE_BLOCKS.contains(blocks[block[x][z]]))
+                    else if (BIOME_FOLIAGE && FOLIAGE_BLOCKS.contains(blocks[block[x][z]]))
                     {
-                        color = biomeFoliage[biome[x][z]];
+                        color = SurveyorSurveyor.tintColor(color, biomeFoliage[biome[x][z]]);
                     }
                     if (z > 0) {
                         if (depth[x][z - 1] < depth[x][z]) brightness = SurveyorSurveyor.Brightness.LOW;
