@@ -15,7 +15,7 @@ public class SurveyorSurveyor {
     static final boolean BIOME_WATER = true;
     static final boolean TRANSPARENT_WATER = true;
     static final int WATER_MAP_COLOR = 0x4040ff;
-    static final int WATER_TEXTURE_COLOR = 0xb2b2b2;
+    static final int WATER_TEXTURE_COLOR = 0x909090;
     static final int FOLIAGE_TEXTURE_COLOR = 0x949594;
     static final int GRASS_TEXTURE_COLOR = 0x949494;
     static final int GRASS_BLOCK_TEXTURE_COLOR = 0x959595;

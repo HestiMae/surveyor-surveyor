@@ -49,7 +49,7 @@ public class Layer {
                 if (water[x][z] > 0) {
                     int waterColor = BIOME_WATER ? tint(WATER_TEXTURE_COLOR, biomeWater[biome[x][z]]) : applyBrightnessRGB(Brightness.LOWEST, WATER_MAP_COLOR);
                     if (TRANSPARENT_WATER) {
-                        color = blend(color, waterColor, Math.min(0.5F + water[x][z] / 32.0F, 1.0F));
+                        color = blend(color, waterColor, Math.min(0.7F + water[x][z] / 53.0F, 1.0F));
                     } else {
                         color = waterColor;
                         brightness = getBrightnessFromDepth(water[x][z], x, z);
