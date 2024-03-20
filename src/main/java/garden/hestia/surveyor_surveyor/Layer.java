@@ -47,14 +47,17 @@ public class Layer {
                 int color = blockColors[block[x][z]];
                 SurveyorSurveyor.Brightness brightness = SurveyorSurveyor.Brightness.NORMAL;
                 if (water[x][z] > 0) {
-                    color = BIOME_WATER ? biomeWater[biome[x][z]] : WATER_MAP_COLOR;
-                    brightness = getBrightnessFromDepth(water[x][z], x, z);
+                    if (TRANSPARENT_WATER) {
+                        color = blend(color, applyBrightnessRGB(Brightness.LOWEST, BIOME_WATER ? biomeWater[biome[x][z]] : WATER_MAP_COLOR), Math.min(0.5F + water[x][z] / 32.0F, 1.0F));
+                    } else {
+                        color = BIOME_WATER ? biomeWater[biome[x][z]] : WATER_MAP_COLOR;
+                        brightness = getBrightnessFromDepth(water[x][z], x, z);
+
+                    }
                 } else {
                     if (BIOME_GRASS && GRASS_BLOCKS.contains(blocks[block[x][z]])) {
                         color = SurveyorSurveyor.tintColor(color, biomeGrass[biome[x][z]]);
-                    }
-                    else if (BIOME_FOLIAGE && FOLIAGE_BLOCKS.contains(blocks[block[x][z]]))
-                    {
+                    } else if (BIOME_FOLIAGE && FOLIAGE_BLOCKS.contains(blocks[block[x][z]])) {
                         color = SurveyorSurveyor.tintColor(color, biomeFoliage[biome[x][z]]);
                     }
                     if (z > 0) {
@@ -62,7 +65,7 @@ public class Layer {
                         if (depth[x][z - 1] > depth[x][z]) brightness = SurveyorSurveyor.Brightness.HIGH;
                     }
                 }
-                colors[x][z] = getRenderColor(brightness, color);
+                colors[x][z] = 0xFF000000 | applyBrightnessRGB(brightness, color);
             }
         }
         return colors;

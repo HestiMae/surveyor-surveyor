@@ -15,6 +15,7 @@ import java.util.stream.IntStream;
 public class SurveyorSurveyor {
     public static final int UINT_OFFSET = 127;
     static final boolean BIOME_WATER = true;
+    static final boolean TRANSPARENT_WATER = true;
     static final int WATER_MAP_COLOR = 0x4040ff;
     static final boolean BIOME_GRASS = true;
     static final boolean BIOME_FOLIAGE = true;
@@ -126,12 +127,12 @@ public class SurveyorSurveyor {
         throw new IllegalStateException("Unexpected value: " + nbt.getClass());
     }
 
-    public static int getRenderColor(Brightness brightness, int color) {
+    public static int applyBrightnessRGB(Brightness brightness, int color) {
         int i = brightness.brightness;
         int r = (color >> 16 & 0xFF) * i / 255;
         int g = (color >> 8 & 0xFF) * i / 255;
         int b = (color & 0xFF) * i / 255;
-        return 0xFF000000 | r << 16 | g << 8 | b;
+        return r << 16 | g << 8 | b;
     }
 
     public static int tintColor(int base, int tint)
@@ -143,6 +144,27 @@ public class SurveyorSurveyor {
                 Color.RGBtoHSB(baseColor.getRed(), baseColor.getGreen(), baseColor.getBlue(), new float[3])[1],
                 Color.RGBtoHSB(baseColor.getRed(), baseColor.getGreen(), baseColor.getBlue(), new float[3])[2]
                 ).getRGB();
+    }
+
+    static int blend(int c1, int c2, float ratio) {
+        float iRatio = 1.0f - ratio;
+
+        int a1 = (c1 >>> 24);
+        int r1 = ((c1 & 0xff0000) >> 16);
+        int g1 = ((c1 & 0xff00) >> 8);
+        int b1 = (c1 & 0xff);
+
+        int a2 = (c2 >>> 24);
+        int r2 = ((c2 & 0xff0000) >> 16);
+        int g2 = ((c2 & 0xff00) >> 8);
+        int b2 = (c2 & 0xff);
+
+        int a = (int)((a1 * iRatio) + (a2 * ratio));
+        int r = (int)((r1 * iRatio) + (r2 * ratio));
+        int g = (int)((g1 * iRatio) + (g2 * ratio));
+        int b = (int)((b1 * iRatio) + (b2 * ratio));
+
+        return a << 24 | r << 16 | g << 8 | b;
     }
 
     /**
