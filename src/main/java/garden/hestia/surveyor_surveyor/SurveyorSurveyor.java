@@ -4,12 +4,10 @@ import com.github.steveice10.opennbt.NBTIO;
 import com.github.steveice10.opennbt.tag.builtin.*;
 
 import javax.imageio.ImageIO;
-import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
-import java.util.List;
 import java.util.stream.IntStream;
 
 public class SurveyorSurveyor {
@@ -17,12 +15,17 @@ public class SurveyorSurveyor {
     static final boolean BIOME_WATER = true;
     static final boolean TRANSPARENT_WATER = true;
     static final int WATER_MAP_COLOR = 0x4040ff;
+    static final int WATER_TEXTURE_COLOR = 0xb2b2b2;
+    static final int FOLIAGE_TEXTURE_COLOR = 0x949594;
+    static final int GRASS_TEXTURE_COLOR = 0x949494;
+    static final int GRASS_BLOCK_TEXTURE_COLOR = 0x959595;
     static final boolean BIOME_GRASS = true;
     static final boolean BIOME_FOLIAGE = true;
     static final List<String> FOLIAGE_BLOCKS = List.of("minecraft:oak_leaves", "minecraft:jungle_leaves",
             "minecraft:acacia_leaves", "minecraft:dark_oak_leaves", "minecraft:mangrove_leaves", "minecraft:vine");
-    static final List<String> GRASS_BLOCKS = List.of("minecraft:grass_block", "minecraft:grass", "minecraft:tall_grass",
+    static final List<String> GRASS_BLOCKS = List.of("minecraft:grass", "minecraft:tall_grass",
             "minecraft:fern", "minecraft:potted_fern", "minecraft:large_fern", "minecraft:sugar_cane");
+    static final List<String> GRASS_BLOCK_BLOCKS = List.of("minecraft:grass_block");
 
     public static void main(String[] args) throws IOException {
         String filename = args[0];
@@ -77,9 +80,8 @@ public class SurveyorSurveyor {
             }
         });
         Layer topLayer = layerData.get(sortedKeys.get(0));
-        for (Integer layer : sortedKeys)
-        {
-            topLayer.fillEmptyFloors(topLayer.y - layerData.get(layer).y,layerData.get(layer).y - heightLimit, Integer.MAX_VALUE, layerData.get(layer));
+        for (Integer layer : sortedKeys) {
+            topLayer.fillEmptyFloors(topLayer.y - layerData.get(layer).y, layerData.get(layer).y - heightLimit, Integer.MAX_VALUE, layerData.get(layer));
         }
         int[][] colors = topLayer.getARGB(blockColors, biomeWater, biomeGrass, biomeFoliage, blocks);
         for (int i = 0; i < colors.length; i++) {
@@ -111,8 +113,7 @@ public class SurveyorSurveyor {
         return outArray;
     }
 
-    public static int[] readVarUInts(Tag nbt, int defaultValue)
-    {
+    public static int[] readVarUInts(Tag nbt, int defaultValue) {
         if (nbt == null) return Collections.nCopies(256, defaultValue).stream().mapToInt(i -> i).toArray();
         if (nbt.getClass().equals(ByteTag.class)) {
             return Collections.nCopies(256, ((ByteTag) nbt).getValue().intValue() + UINT_OFFSET).stream().mapToInt(i -> i).toArray();
@@ -135,15 +136,23 @@ public class SurveyorSurveyor {
         return r << 16 | g << 8 | b;
     }
 
-    public static int tintColor(int base, int tint)
-    {
-        Color baseColor = new Color(base);
-        Color tintColor = new Color(tint);
-        return Color.getHSBColor(
-                Color.RGBtoHSB(tintColor.getRed(), tintColor.getGreen(), tintColor.getBlue(), new float[3])[0],
-                Color.RGBtoHSB(baseColor.getRed(), baseColor.getGreen(), baseColor.getBlue(), new float[3])[1],
-                Color.RGBtoHSB(baseColor.getRed(), baseColor.getGreen(), baseColor.getBlue(), new float[3])[2]
-                ).getRGB();
+    public static int tint(int base, int tint) {
+        int a1 = (base >>> 24);
+        int r1 = ((base & 0xff0000) >> 16);
+        int g1 = ((base & 0xff00) >> 8);
+        int b1 = (base & 0xff);
+
+        int a2 = (tint >>> 24);
+        int r2 = ((tint & 0xff0000) >> 16);
+        int g2 = ((tint & 0xff00) >> 8);
+        int b2 = (tint & 0xff);
+
+        int a = (a1 * a2) / 256;
+        int r = (r1 * r2) / 256;
+        int g = (g1 * g2) / 256;
+        int b = (b1 * b2) / 256;
+
+        return a << 24 | r << 16 | g << 8 | b;
     }
 
     static int blend(int c1, int c2, float ratio) {
@@ -159,10 +168,10 @@ public class SurveyorSurveyor {
         int g2 = ((c2 & 0xff00) >> 8);
         int b2 = (c2 & 0xff);
 
-        int a = (int)((a1 * iRatio) + (a2 * ratio));
-        int r = (int)((r1 * iRatio) + (r2 * ratio));
-        int g = (int)((g1 * iRatio) + (g2 * ratio));
-        int b = (int)((b1 * iRatio) + (b2 * ratio));
+        int a = (int) ((a1 * iRatio) + (a2 * ratio));
+        int r = (int) ((r1 * iRatio) + (r2 * ratio));
+        int g = (int) ((g1 * iRatio) + (g2 * ratio));
+        int b = (int) ((b1 * iRatio) + (b2 * ratio));
 
         return a << 24 | r << 16 | g << 8 | b;
     }
