@@ -15,6 +15,9 @@ public class SurveyorSurveyor {
     static final boolean BIOME_WATER = true;
     static final boolean TRANSPARENT_WATER = true;
     static final int WATER_MAP_COLOR = 0x4040ff;
+    static final int BIRCH_MAP_COLOR = 0x80a755;
+    static final int SPRUCE_MAP_COLOR = 0x619961;
+    static final int MANGROVE_MAP_COLOR = 0x92c648;
     static final int WATER_TEXTURE_COLOR = 0x909090;
     static final int FOLIAGE_TEXTURE_COLOR = 0x949594;
     static final int GRASS_TEXTURE_COLOR = 0x949494;
@@ -26,7 +29,6 @@ public class SurveyorSurveyor {
     static final List<String> GRASS_BLOCKS = List.of("minecraft:grass", "minecraft:tall_grass",
             "minecraft:fern", "minecraft:potted_fern", "minecraft:large_fern", "minecraft:sugar_cane");
     static final List<String> GRASS_BLOCK_BLOCKS = List.of("minecraft:grass_block");
-
     public static void main(String[] args) throws IOException {
         String filename = args[0];
         int heightLimit = Integer.parseInt(args[1]);

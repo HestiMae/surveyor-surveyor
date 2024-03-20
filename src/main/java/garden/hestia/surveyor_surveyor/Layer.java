@@ -45,6 +45,7 @@ public class Layer {
             for (int z = 0; z < 512; z++) {
                 if (isEmpty(x, z)) continue;
                 int color = blockColors[block[x][z]];
+
                 SurveyorSurveyor.Brightness brightness = SurveyorSurveyor.Brightness.NORMAL;
                 if (water[x][z] > 0) {
                     int waterColor = BIOME_WATER ? tint(WATER_TEXTURE_COLOR, biomeWater[biome[x][z]]) : applyBrightnessRGB(Brightness.LOWEST, WATER_MAP_COLOR);
@@ -62,6 +63,12 @@ public class Layer {
                         color = SurveyorSurveyor.tint(GRASS_BLOCK_TEXTURE_COLOR, biomeGrass[biome[x][z]]);
                     } else if (BIOME_FOLIAGE && FOLIAGE_BLOCKS.contains(blocks[block[x][z]])) {
                         color = SurveyorSurveyor.tint(FOLIAGE_TEXTURE_COLOR, biomeFoliage[biome[x][z]]);
+                    } else if (BIOME_FOLIAGE && blocks[block[x][z]].equals("minecraft:birch_leaves")) {
+                        color = tint(FOLIAGE_TEXTURE_COLOR, BIRCH_MAP_COLOR);
+                    } else if (BIOME_FOLIAGE && blocks[block[x][z]].equals("minecraft:spruce_leaves")) {
+                        color = tint(FOLIAGE_TEXTURE_COLOR, SPRUCE_MAP_COLOR);
+                    } else if (BIOME_FOLIAGE && blocks[block[x][z]].equals("minecraft:mangrove_leaves")) {
+                        color = tint(FOLIAGE_TEXTURE_COLOR, MANGROVE_MAP_COLOR);
                     }
                     if (z > 0) {
                         if (depth[x][z - 1] < depth[x][z]) brightness = SurveyorSurveyor.Brightness.LOW;
