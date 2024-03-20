@@ -69,6 +69,8 @@ public class Layer {
                         color = tint(FOLIAGE_TEXTURE_COLOR, SPRUCE_MAP_COLOR);
                     } else if (BIOME_FOLIAGE && blocks[block[x][z]].equals("minecraft:mangrove_leaves")) {
                         color = tint(FOLIAGE_TEXTURE_COLOR, MANGROVE_MAP_COLOR);
+                    } else if (STONE_BLOCKS.contains(blocks[block[x][z]])) {
+                        color = STONE_MAP_COLOR;
                     }
                     if (z > 0) {
                         if (depth[x][z - 1] < depth[x][z]) brightness = SurveyorSurveyor.Brightness.LOW;
