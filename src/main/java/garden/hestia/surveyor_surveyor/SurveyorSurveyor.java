@@ -31,70 +31,123 @@ public class SurveyorSurveyor {
             "minecraft:fern", "minecraft:potted_fern", "minecraft:large_fern", "minecraft:sugar_cane");
     static final List<String> GRASS_BLOCK_BLOCKS = List.of("minecraft:grass_block");
     static final List<String> STONE_BLOCKS = List.of("minecraft:stone", "minecraft:andesite");
-    public static void main(String[] args) throws IOException {
-        String filename = args[0];
-        int heightLimit = Integer.parseInt(args[1]);
-        File file = new File(filename);
-        CompoundTag nbt = NBTIO.readFile(file, true, false);
-        BufferedImage combinedImage = new BufferedImage(512, 512, BufferedImage.TYPE_INT_ARGB);
-        Map<Integer, BufferedImage> seenLayers = new HashMap<>();
-        Map<Integer, Layer> layerData = new HashMap<>();
-        int[] blockColors = (int[]) nbt.get("blockColors").getValue();
-        int[] biomeWater = (int[]) nbt.get("biomeWater").getValue();
-        int[] biomeGrass = (int[]) nbt.get("biomeGrass").getValue();
-        int[] biomeFoliage = (int[]) nbt.get("biomeFoliage").getValue();
-        String[] blocks = ((List<Tag>) nbt.get("blocks").getValue()).stream().map(tag -> (String) tag.getValue()).toArray(String[]::new);
 
-        CompoundTag chunksCompound = nbt.get("chunks");
-        for (String worldChunkPosString : chunksCompound.keySet()) {
-            int worldChunkX = Integer.parseInt(worldChunkPosString.split(",")[0]);
-            int worldChunkZ = Integer.parseInt(worldChunkPosString.split(",")[1]);
-            int regionChunkX = worldChunkX & 31; //mod 32
-            int regionChunkZ = worldChunkZ & 31;
-            CompoundTag chunkCompound = chunksCompound.get(worldChunkPosString);
-            CompoundTag layersCompound = chunkCompound.get("layers");
-            for (String layer : layersCompound.keySet().stream().sorted(Comparator.comparingInt(Integer::parseInt)).toList()) {
-                layerData.putIfAbsent(Integer.parseInt(layer), new Layer(512, Integer.parseInt(layer)));
-                CompoundTag layerCompound = layersCompound.get(layer);
-                int[] depth = extendUInts(readVarUInts(layerCompound.get("depth"), -1), -1);
-                int[] block = extendUInts(unmaskUInts(readVarUInts(layerCompound.get("block"), 0), depth), 0);
-                int[] biome = extendUInts(unmaskUInts(readVarUInts(layerCompound.get("biome"), 0), depth), 0);
-                int[] light = extendUInts(unmaskUInts(readVarUInts(layerCompound.get("light"), 0), depth), 0);
-                int[] water = extendUInts(unmaskUInts(readVarUInts(layerCompound.get("water"), 0), depth), 0);
-                layerData.get(Integer.parseInt(layer)).putChunk(regionChunkX, regionChunkZ, depth, block, biome, light, water);
-            }
+    public static void main(String[] args) throws IOException {
+        File path = new File(args[0]);
+        int heightLimit = Integer.parseInt(args[1]);
+        List<File> files = new ArrayList<>();
+        if (path.isDirectory()) {
+            files.addAll(Arrays.stream(Objects.requireNonNull(path.listFiles(f -> f.getName().endsWith(".dat")))).toList());
+        } else {
+            files.add(path);
         }
-        List<Integer> sortedKeys = layerData.keySet().stream().mapToInt(i -> i).boxed().sorted(Comparator.reverseOrder()).toList();
-        for (Integer layerHeight : sortedKeys) {
-            seenLayers.put(layerHeight, new BufferedImage(512, 512, BufferedImage.TYPE_INT_ARGB));
-            Layer layer = layerData.get(layerHeight);
-            int[][] colors = layer.getARGB(blockColors, biomeWater, biomeGrass, biomeFoliage, blocks);
-            for (int x = 0; x < colors.length; x++) {
-                for (int z = 0; z < colors[x].length; z++) {
-                    if (colors[x][z] == 0) continue;
-                    seenLayers.get(layerHeight).setRGB(x, z, colors[x][z]);
+        Map<RegionPos, CompoundTag> regionNbt = new HashMap<>();
+        for (File file : files) {
+            String[] split = file.getName().split("\\.");
+            if (split.length == 4 && split[0].equals("c")) {
+                try {
+                    int regionX = Integer.parseInt(split[1]);
+                    int regionZ = Integer.parseInt(split[2]);
+                    CompoundTag nbt = NBTIO.readFile(file, true, false);
+                    regionNbt.put(new RegionPos(regionX, regionZ), nbt);
+                } catch (NumberFormatException ignored) {
+
                 }
             }
         }
-        seenLayers.forEach((l, bi) -> {
+        int minRegionX = regionNbt.keySet().stream().mapToInt(RegionPos::x).min().orElseThrow();
+        int maxRegionX = regionNbt.keySet().stream().mapToInt(RegionPos::x).max().orElseThrow();
+        int minRegionZ = regionNbt.keySet().stream().mapToInt(RegionPos::z).min().orElseThrow();
+        int maxRegionZ = regionNbt.keySet().stream().mapToInt(RegionPos::z).max().orElseThrow();
+
+        int imageWidth = (maxRegionX + 1 - minRegionX) * 512;
+        int imageHeight = (maxRegionZ + 1 - minRegionZ) * 512;
+        Map<Integer, LayerImage> layers = new HashMap<>();
+        List<Integer> blockColors = new ArrayList<>();
+        List<Integer> biomeWater = new ArrayList<>();
+        List<Integer> biomeGrass = new ArrayList<>();
+        List<Integer> biomeFoliage = new ArrayList<>();
+        List<String> blocks = new ArrayList<>();
+        List<String> biomes = new ArrayList<>();
+        for (RegionPos regionPos : regionNbt.keySet()) {
+            CompoundTag nbt = regionNbt.get(regionPos);
+
+            String[] regionBlocks = ((List<Tag>) nbt.get("blocks").getValue()).stream().map(tag -> (String) tag.getValue()).toArray(String[]::new);
+            int[] regionBlockColors = (int[]) nbt.get("blockColors").getValue();
+            for (int i = 0; i < regionBlocks.length; i++) {
+                if (!blocks.contains(regionBlocks[i]))
+                {
+                    blocks.add(regionBlocks[i]);
+                    blockColors.add(regionBlockColors[i]);
+                }
+            }
+            int[] blockRemap = remapping(blocks, regionBlocks);
+
+            String[] regionBiomes = ((List<Tag>) nbt.get("biomes").getValue()).stream().map(tag -> (String) tag.getValue()).toArray(String[]::new);
+            int[] regionBiomeWater = (int[]) nbt.get("biomeWater").getValue();
+            int[] regionBiomeGrass = (int[]) nbt.get("biomeGrass").getValue();
+            int[] regionBiomeFoliage = (int[]) nbt.get("biomeFoliage").getValue();
+            for (int i = 0; i < regionBiomes.length; i++) {
+                if (!biomes.contains(regionBiomes[i]))
+                {
+                    biomes.add(regionBiomes[i]);
+                    biomeWater.add(regionBiomeWater[i]);
+                    biomeGrass.add(regionBiomeGrass[i]);
+                    biomeFoliage.add(regionBiomeFoliage[i]);
+                }
+            }
+            int[] biomeRemap = remapping(biomes, regionBiomes);
+
+            CompoundTag chunksCompound = nbt.get("chunks");
+            for (String worldChunkPosString : chunksCompound.keySet()) {
+                int worldChunkX = Integer.parseInt(worldChunkPosString.split(",")[0]);
+                int worldChunkZ = Integer.parseInt(worldChunkPosString.split(",")[1]);
+                int regionChunkX = worldChunkX & 31; //mod 32
+                int regionChunkZ = worldChunkZ & 31;
+                CompoundTag chunkCompound = chunksCompound.get(worldChunkPosString);
+                CompoundTag layersCompound = chunkCompound.get("layers");
+                for (String layer : layersCompound.keySet().stream().sorted(Comparator.comparingInt(Integer::parseInt)).toList()) {
+                    layers.putIfAbsent(Integer.parseInt(layer), new LayerImage(new Layer(imageWidth, imageHeight, Integer.parseInt(layer)), new BufferedImage(imageWidth, imageHeight, BufferedImage.TYPE_INT_ARGB)));
+                    CompoundTag layerCompound = layersCompound.get(layer);
+                    int[] depth = extendUInts(readVarUInts(layerCompound.get("depth"), -1), -1);
+                    int[] block = extendUInts(unmaskUInts(readVarUInts(layerCompound.get("block"), 0), depth), 0);
+                    remap(block, blockRemap);
+                    int[] biome = extendUInts(unmaskUInts(readVarUInts(layerCompound.get("biome"), 0), depth), 0);
+                    remap(biome, biomeRemap);
+                    int[] light = extendUInts(unmaskUInts(readVarUInts(layerCompound.get("light"), 0), depth), 0);
+                    int[] water = extendUInts(unmaskUInts(readVarUInts(layerCompound.get("water"), 0), depth), 0);
+                    layers.get(Integer.parseInt(layer)).layer().putChunk((regionPos.x - minRegionX) * 32 + regionChunkX, (regionPos.z - minRegionZ) * 32 + regionChunkZ, depth, block, biome, light, water);
+                }
+            }
+        }
+
+        int[] blockColorsArray = blockColors.stream().mapToInt(i -> i).toArray();
+        int[] biomeWaterArray = biomeWater.stream().mapToInt(i -> i).toArray();
+        int[] biomeGrassArray = biomeGrass.stream().mapToInt(i -> i).toArray();
+        int[] biomeFoliageArray = biomeFoliage.stream().mapToInt(i -> i).toArray();
+        String[] blocksArray = blocks.toArray(new String[]{});
+
+        Layer topLayer = layers.get(layers.keySet().stream().mapToInt(i -> i).max().orElseThrow()).layer();
+        List<Integer> sortedKeys = layers.keySet().stream().sorted(Comparator.reverseOrder()).toList();
+        for (Integer layer : sortedKeys) {
+            topLayer.fillEmptyFloors(topLayer.y - layers.get(layer).layer.y, layers.get(layer).layer.y - heightLimit, Integer.MAX_VALUE, layers.get(layer).layer);
+        }
+        layers.put(null, new LayerImage(topLayer.copy(), new BufferedImage(imageWidth, imageHeight, BufferedImage.TYPE_INT_ARGB)));
+        layers.forEach((height, layerImage) -> {
+            Layer layer = layerImage.layer();
+            int[][] colors = layer.getARGB(blockColorsArray, biomeWaterArray, biomeGrassArray, biomeFoliageArray, blocksArray);
+            for (int x = 0; x < colors.length; x++) {
+                for (int z = 0; z < colors[x].length; z++) {
+                    if (colors[x][z] == 0) continue;
+                    layerImage.image().setRGB(x, z, colors[x][z]);
+                }
+            }
             try {
-                ImageIO.write(bi, "png", new File(file.getPath().replace(".dat", "-" + l + ".png")));
+                ImageIO.write(layerImage.image(), "png", (path.isDirectory() ? path : path.getParentFile()).toPath().resolve("surveyor-%s.png".formatted(Objects.toString(height, "combined"))).toFile());
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
         });
-        Layer topLayer = layerData.get(sortedKeys.get(0));
-        for (Integer layer : sortedKeys) {
-            topLayer.fillEmptyFloors(topLayer.y - layerData.get(layer).y, layerData.get(layer).y - heightLimit, Integer.MAX_VALUE, layerData.get(layer));
-        }
-        int[][] colors = topLayer.getARGB(blockColors, biomeWater, biomeGrass, biomeFoliage, blocks);
-        for (int i = 0; i < colors.length; i++) {
-            for (int j = 0; j < colors.length; j++) {
-                if (colors[i][j] == 0) continue;
-                combinedImage.setRGB(i, j, colors[i][j]);
-            }
-        }
-        ImageIO.write(combinedImage, "png", new File(file.getPath().replace(".dat", "-combined.png")));
     }
 
     public static int[] unmaskUInts(int[] array, int[] mask) {
@@ -180,6 +233,22 @@ public class SurveyorSurveyor {
         return a << 24 | r << 16 | g << 8 | b;
     }
 
+    static <T> int[] remapping(List<T> list, T[] array)
+    {
+        int[] outArray = new int[array.length];
+        for (int i = 0; i < array.length; i++) {
+            outArray[i] = list.indexOf(array[i]);
+        }
+        return outArray;
+    }
+
+    static void remap(int[] values, int[] remapping)
+    {
+        for (int i = 0; i < values.length; i++) {
+            values[i] = remapping[values[i]];
+        }
+    }
+
     /**
      * @author ampflower
      */
@@ -209,5 +278,11 @@ public class SurveyorSurveyor {
             this.brightness = brightness;
 
         }
+    }
+
+    record RegionPos(int x, int z) {
+    }
+
+    record LayerImage(Layer layer, BufferedImage image) {
     }
 }

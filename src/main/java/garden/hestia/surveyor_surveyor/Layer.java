@@ -1,5 +1,7 @@
 package garden.hestia.surveyor_surveyor;
 
+import java.util.Arrays;
+
 import static garden.hestia.surveyor_surveyor.SurveyorSurveyor.*;
 
 public class Layer {
@@ -8,14 +10,18 @@ public class Layer {
     public int[][] biome;
     public int[][] light;
     public int[][] water;
+    public final int width;
+    public final int height;
     public final int y;
 
-    public Layer(int size, int y) {
-        depth = new int[size][size];
-        block = new int[size][size];
-        biome = new int[size][size];
-        light = new int[size][size];
-        water = new int[size][size];
+    public Layer(int width, int height, int y) {
+        depth = new int[width][height];
+        block = new int[width][height];
+        biome = new int[width][height];
+        light = new int[width][height];
+        water = new int[width][height];
+        this.width = width;
+        this.height = height;
         this.y = y;
     }
 
@@ -40,9 +46,9 @@ public class Layer {
     }
 
     int[][] getARGB(int[] blockColors, int[] biomeWater, int[] biomeGrass, int[] biomeFoliage, String[] blocks) {
-        int[][] colors = new int[512][512];
-        for (int x = 0; x < 512; x++) {
-            for (int z = 0; z < 512; z++) {
+        int[][] colors = new int[width][height];
+        for (int x = 0; x < width; x++) {
+            for (int z = 0; z < height; z++) {
                 if (isEmpty(x, z)) continue;
                 int color = blockColors[block[x][z]];
 
@@ -84,16 +90,26 @@ public class Layer {
     }
 
     public void fillEmptyFloors(int depthOffset, int minDepth, int maxDepth, Layer layer) {
-        for (int i = 0; i < 512; i++) {
-            for (int j = 0; j < 512; j++) {
-                if (this.depth[i][j] == -1 && layer.depth[i][j] != -1 && layer.depth[i][j] <= maxDepth && layer.depth[i][j] >= minDepth) {
-                    this.depth[i][j] = layer.depth[i][j] + depthOffset;
-                    this.block[i][j] = layer.block[i][j];
-                    this.biome[i][j] = layer.biome[i][j];
-                    this.light[i][j] = layer.light[i][j];
-                    this.water[i][j] = layer.water[i][j];
+        for (int x = 0; x < width; x++) {
+            for (int z = 0; z < height; z++) {
+                if (this.depth[x][z] == -1 && layer.depth[x][z] != -1 && layer.depth[x][z] <= maxDepth && layer.depth[x][z] >= minDepth) {
+                    this.depth[x][z] = layer.depth[x][z] + depthOffset;
+                    this.block[x][z] = layer.block[x][z];
+                    this.biome[x][z] = layer.biome[x][z];
+                    this.light[x][z] = layer.light[x][z];
+                    this.water[x][z] = layer.water[x][z];
                 }
             }
         }
+    }
+
+    public Layer copy() {
+        Layer newLayer = new Layer(width, height, y);
+        newLayer.depth = Arrays.stream(depth).map(int[]::clone).toArray(int[][]::new);
+        newLayer.block = Arrays.stream(block).map(int[]::clone).toArray(int[][]::new);
+        newLayer.biome = Arrays.stream(biome).map(int[]::clone).toArray(int[][]::new);
+        newLayer.light = Arrays.stream(light).map(int[]::clone).toArray(int[][]::new);
+        newLayer.water = Arrays.stream(water).map(int[]::clone).toArray(int[][]::new);
+        return newLayer;
     }
 }
