@@ -1,10 +1,12 @@
 package garden.hestia.surveyor_surveyor;
 
 import java.util.Arrays;
+import java.util.BitSet;
 
 import static garden.hestia.surveyor_surveyor.SurveyorSurveyor.*;
 
 public class Layer {
+    BitSet found;
     public int[][] depth;
     public int[][] block;
     public int[][] biome;
@@ -15,6 +17,7 @@ public class Layer {
     public final int y;
 
     public Layer(int width, int height, int y) {
+        found = new BitSet(width * height);
         depth = new int[width][height];
         block = new int[width][height];
         biome = new int[width][height];
@@ -25,9 +28,10 @@ public class Layer {
         this.y = y;
     }
 
-    public void putChunk(int chunkX, int chunkZ, int[] cDepth, int[] cBlock, int[] cBiome, int[] cLight, int[] cWater) {
+    public void putChunk(int chunkX, int chunkZ, BitSet cFound, int[] cDepth, int[] cBlock, int[] cBiome, int[] cLight, int[] cWater) {
         for (int x = 0; x < 16; x++) {
             for (int z = 0; z < 16; z++) {
+                found.set((chunkX * 16 + x) * height + chunkZ * 16 + z, cFound.get(x * 16 + z));
                 depth[chunkX * 16 + x][chunkZ * 16 + z] = cDepth[x * 16 + z];
                 block[chunkX * 16 + x][chunkZ * 16 + z] = cBlock[x * 16 + z];
                 biome[chunkX * 16 + x][chunkZ * 16 + z] = cBiome[x * 16 + z];
@@ -38,7 +42,7 @@ public class Layer {
     }
 
     boolean isEmpty(int x, int z) {
-        return depth[x][z] == -1;
+        return !found.get(x * height + z);
     }
 
     int getHeight(int x, int z) {
@@ -92,7 +96,8 @@ public class Layer {
     public void fillEmptyFloors(int depthOffset, int minDepth, int maxDepth, Layer layer) {
         for (int x = 0; x < width; x++) {
             for (int z = 0; z < height; z++) {
-                if (this.depth[x][z] == -1 && layer.depth[x][z] != -1 && layer.depth[x][z] <= maxDepth && layer.depth[x][z] >= minDepth) {
+                if (this.isEmpty(x, z) && !layer.isEmpty(x, z) && layer.depth[x][z] <= maxDepth && layer.depth[x][z] >= minDepth) {
+                    found.set(x * height + z);
                     this.depth[x][z] = layer.depth[x][z] + depthOffset;
                     this.block[x][z] = layer.block[x][z];
                     this.biome[x][z] = layer.biome[x][z];
@@ -105,6 +110,7 @@ public class Layer {
 
     public Layer copy() {
         Layer newLayer = new Layer(width, height, y);
+        newLayer.found = (BitSet) this.found.clone();
         newLayer.depth = Arrays.stream(depth).map(int[]::clone).toArray(int[][]::new);
         newLayer.block = Arrays.stream(block).map(int[]::clone).toArray(int[][]::new);
         newLayer.biome = Arrays.stream(biome).map(int[]::clone).toArray(int[][]::new);

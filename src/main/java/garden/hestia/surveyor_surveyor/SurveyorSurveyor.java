@@ -8,10 +8,9 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
-import java.util.stream.IntStream;
 
 public class SurveyorSurveyor {
-    public static final int UINT_OFFSET = 127;
+    public static final int UINT_OFFSET = 128;
     static final boolean BIOME_WATER = true;
     static final boolean TRANSPARENT_WATER = true;
     static final int WATER_MAP_COLOR = 0x4040ff;
@@ -106,17 +105,19 @@ public class SurveyorSurveyor {
                 int regionChunkZ = worldChunkZ & 31;
                 CompoundTag chunkCompound = chunksCompound.get(worldChunkPosString);
                 CompoundTag layersCompound = chunkCompound.get("layers");
-                for (String layer : layersCompound.keySet().stream().sorted(Comparator.comparingInt(Integer::parseInt)).toList()) {
-                    layers.putIfAbsent(Integer.parseInt(layer), new LayerImage(new Layer(imageWidth, imageHeight, Integer.parseInt(layer)), new BufferedImage(imageWidth, imageHeight, BufferedImage.TYPE_INT_ARGB)));
+                for (String layer : layersCompound.keySet()) {
+                    layers.computeIfAbsent(Integer.parseInt(layer), k -> new LayerImage(new Layer(imageWidth, imageHeight, Integer.parseInt(layer)), new BufferedImage(imageWidth, imageHeight, BufferedImage.TYPE_INT_ARGB)));
                     CompoundTag layerCompound = layersCompound.get(layer);
-                    int[] depth = extendUInts(readVarUInts(layerCompound.get("depth"), -1), -1);
-                    int[] block = extendUInts(unmaskUInts(readVarUInts(layerCompound.get("block"), 0), depth), 0);
+                    if (!layerCompound.contains("found")) continue;
+                    BitSet found = BitSet.valueOf(((LongArrayTag) layerCompound.get("found")).getValue());
+                    int[] depth = extendUInts(unmaskUInts(readVarUInts(layerCompound.get("depth"), 0), found), 0);
+                    int[] block = extendUInts(unmaskUInts(readVarUInts(layerCompound.get("block"), 0), found), 0);
                     remap(block, blockRemap);
-                    int[] biome = extendUInts(unmaskUInts(readVarUInts(layerCompound.get("biome"), 0), depth), 0);
+                    int[] biome = extendUInts(unmaskUInts(readVarUInts(layerCompound.get("biome"), 0), found), 0);
                     remap(biome, biomeRemap);
-                    int[] light = extendUInts(unmaskUInts(readVarUInts(layerCompound.get("light"), 0), depth), 0);
-                    int[] water = extendUInts(unmaskUInts(readVarUInts(layerCompound.get("water"), 0), depth), 0);
-                    layers.get(Integer.parseInt(layer)).layer().putChunk((regionPos.x - minRegionX) * 32 + regionChunkX, (regionPos.z - minRegionZ) * 32 + regionChunkZ, depth, block, biome, light, water);
+                    int[] light = extendUInts(unmaskUInts(readVarUInts(layerCompound.get("light"), 0), found), 0);
+                    int[] water = extendUInts(unmaskUInts(readVarUInts(layerCompound.get("water"), 0), found), 0);
+                    layers.get(Integer.parseInt(layer)).layer().putChunk((regionPos.x - minRegionX) * 32 + regionChunkX, (regionPos.z - minRegionZ) * 32 + regionChunkZ, found, depth, block, biome, light, water);
                 }
             }
         }
@@ -127,12 +128,12 @@ public class SurveyorSurveyor {
         int[] biomeFoliageArray = biomeFoliage.stream().mapToInt(i -> i).toArray();
         String[] blocksArray = blocks.toArray(new String[]{});
 
-        Layer topLayer = layers.get(layers.keySet().stream().mapToInt(i -> i).max().orElseThrow()).layer();
-        List<Integer> sortedKeys = layers.keySet().stream().sorted(Comparator.reverseOrder()).toList();
+        List<Integer> sortedKeys = new ArrayList<>(layers.keySet().stream().sorted(Comparator.reverseOrder()).toList());
+        Layer combinedLayer = new Layer(imageWidth, imageHeight, sortedKeys.get(0));
         for (Integer layer : sortedKeys) {
-            topLayer.fillEmptyFloors(topLayer.y - layers.get(layer).layer.y, layers.get(layer).layer.y - heightLimit, Integer.MAX_VALUE, layers.get(layer).layer);
+            combinedLayer.fillEmptyFloors(combinedLayer.y - layers.get(layer).layer.y, layers.get(layer).layer.y - heightLimit, Integer.MAX_VALUE, layers.get(layer).layer);
         }
-        layers.put(null, new LayerImage(topLayer.copy(), new BufferedImage(imageWidth, imageHeight, BufferedImage.TYPE_INT_ARGB)));
+        layers.put(null, new LayerImage(combinedLayer, new BufferedImage(imageWidth, imageHeight, BufferedImage.TYPE_INT_ARGB)));
         layers.forEach((height, layerImage) -> {
             Layer layer = layerImage.layer();
             int[][] colors = layer.getARGB(blockColorsArray, biomeWaterArray, biomeGrassArray, biomeFoliageArray, blocksArray);
@@ -150,12 +151,12 @@ public class SurveyorSurveyor {
         });
     }
 
-    public static int[] unmaskUInts(int[] array, int[] mask) {
-        if (array.length == mask.length) return array;
-        int[] newArray = new int[mask.length];
+    public static int[] unmaskUInts(int[] array, BitSet mask) {
+        if (array.length == mask.size()) return array;
+        int[] newArray = new int[mask.size()];
         int maskedIndex = 0;
-        for (int i = 0; i < mask.length; i++) {
-            if (mask[i] != -1) {
+        for (int i = 0; i < mask.size(); i++) {
+            if (mask.get(i)) {
                 newArray[i] = array[maskedIndex];
                 maskedIndex++;
             }
@@ -164,21 +165,20 @@ public class SurveyorSurveyor {
     }
 
     public static int[] extendUInts(int[] varArray, int defaultValue) {
-        int[] outArray = Collections.nCopies(256, defaultValue).stream().mapToInt(i -> i).toArray();
         if (varArray.length == 256) return varArray;
+        int[] outArray = ofSingle(defaultValue, 256);
         System.arraycopy(varArray, 0, outArray, 0, varArray.length);
         return outArray;
     }
 
     public static int[] readVarUInts(Tag nbt, int defaultValue) {
-        if (nbt == null) return Collections.nCopies(256, defaultValue).stream().mapToInt(i -> i).toArray();
+        if (nbt == null) return ofSingle(defaultValue, 256);
         if (nbt.getClass().equals(ByteTag.class)) {
-            return Collections.nCopies(256, ((ByteTag) nbt).getValue().intValue() + UINT_OFFSET).stream().mapToInt(i -> i).toArray();
+            return ofSingle(((ByteTag) nbt).getValue().intValue() + UINT_OFFSET, 256);
         } else if (nbt.getClass().equals(ByteArrayTag.class)) {
-            byte[] bytes = ((ByteArrayTag) nbt).getValue();
-            return IntStream.range(0, bytes.length).map(i -> bytes[i] + UINT_OFFSET).toArray();
+            return byteToInt(((ByteArrayTag) nbt).getValue());
         } else if (nbt.getClass().equals(IntTag.class)) {
-            return Collections.nCopies(256, ((IntTag) nbt).getValue()).stream().mapToInt(i -> i).toArray();
+            return ofSingle(((IntTag) nbt).getValue(), 256);
         } else if (nbt.getClass().equals(IntArrayTag.class)) {
             return ((IntArrayTag) nbt).getValue();
         }
@@ -247,6 +247,20 @@ public class SurveyorSurveyor {
         for (int i = 0; i < values.length; i++) {
             values[i] = remapping[values[i]];
         }
+    }
+    public static int[] ofSingle(int value, int size) {
+        int[] array = new int[size];
+        Arrays.fill(array, value);
+        return array;
+    }
+
+    public static int[] byteToInt(byte[] array)
+    {
+        int[] outArray = new int[array.length];
+        for (int i = 0; i < array.length; i++) {
+           outArray[i] = array[i] + UINT_OFFSET;
+        }
+        return outArray;
     }
 
     /**
