@@ -2,6 +2,9 @@ package garden.hestia.surveyor_surveyor;
 
 import com.github.steveice10.opennbt.NBTIO;
 import com.github.steveice10.opennbt.tag.builtin.*;
+import garden.hestia.surveyor_surveyor.util.ArrayUtil;
+import garden.hestia.surveyor_surveyor.util.uints.UInt;
+import garden.hestia.surveyor_surveyor.util.uints.UInts;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
@@ -24,6 +27,7 @@ public class SurveyorSurveyor {
     static final int GRASS_BLOCK_TEXTURE_COLOR = 0x959595;
     static final boolean BIOME_GRASS = true;
     static final boolean BIOME_FOLIAGE = true;
+    static final int[] DEFAULT_ARRAY = ArrayUtil.ofSingle(0, 256);
     static final List<String> FOLIAGE_BLOCKS = List.of("minecraft:oak_leaves", "minecraft:jungle_leaves",
             "minecraft:acacia_leaves", "minecraft:dark_oak_leaves", "minecraft:mangrove_leaves", "minecraft:vine");
     static final List<String> GRASS_BLOCKS = List.of("minecraft:grass", "minecraft:tall_grass",
@@ -74,28 +78,24 @@ public class SurveyorSurveyor {
             String[] regionBlocks = ((List<Tag>) nbt.get("blocks").getValue()).stream().map(tag -> (String) tag.getValue()).toArray(String[]::new);
             int[] regionBlockColors = (int[]) nbt.get("blockColors").getValue();
             for (int i = 0; i < regionBlocks.length; i++) {
-                if (!blocks.contains(regionBlocks[i]))
-                {
+                if (!blocks.contains(regionBlocks[i])) {
                     blocks.add(regionBlocks[i]);
                     blockColors.add(regionBlockColors[i]);
                 }
             }
-            int[] blockRemap = remapping(blocks, regionBlocks);
 
             String[] regionBiomes = ((List<Tag>) nbt.get("biomes").getValue()).stream().map(tag -> (String) tag.getValue()).toArray(String[]::new);
             int[] regionBiomeWater = (int[]) nbt.get("biomeWater").getValue();
             int[] regionBiomeGrass = (int[]) nbt.get("biomeGrass").getValue();
             int[] regionBiomeFoliage = (int[]) nbt.get("biomeFoliage").getValue();
             for (int i = 0; i < regionBiomes.length; i++) {
-                if (!biomes.contains(regionBiomes[i]))
-                {
+                if (!biomes.contains(regionBiomes[i])) {
                     biomes.add(regionBiomes[i]);
                     biomeWater.add(regionBiomeWater[i]);
                     biomeGrass.add(regionBiomeGrass[i]);
                     biomeFoliage.add(regionBiomeFoliage[i]);
                 }
             }
-            int[] biomeRemap = remapping(biomes, regionBiomes);
 
             CompoundTag chunksCompound = nbt.get("chunks");
             for (String worldChunkPosString : chunksCompound.keySet()) {
@@ -109,14 +109,14 @@ public class SurveyorSurveyor {
                     layers.computeIfAbsent(Integer.parseInt(layer), k -> new LayerImage(new Layer(imageWidth, imageHeight, Integer.parseInt(layer)), new BufferedImage(imageWidth, imageHeight, BufferedImage.TYPE_INT_ARGB)));
                     CompoundTag layerCompound = layersCompound.get(layer);
                     if (!layerCompound.contains("found")) continue;
-                    BitSet found = BitSet.valueOf(((LongArrayTag) layerCompound.get("found")).getValue());
-                    int[] depth = extendUInts(unmaskUInts(readVarUInts(layerCompound.get("depth"), 0), found), 0);
-                    int[] block = extendUInts(unmaskUInts(readVarUInts(layerCompound.get("block"), 0), found), 0);
-                    remap(block, blockRemap);
-                    int[] biome = extendUInts(unmaskUInts(readVarUInts(layerCompound.get("biome"), 0), found), 0);
-                    remap(biome, biomeRemap);
-                    int[] light = extendUInts(unmaskUInts(readVarUInts(layerCompound.get("light"), 0), found), 0);
-                    int[] water = extendUInts(unmaskUInts(readVarUInts(layerCompound.get("water"), 0), found), 0);
+                    BitSet found = new BitSet(256);
+                    found.or(BitSet.valueOf(((LongArrayTag) layerCompound.get("found")).getValue()));
+                    int cardinality = found.cardinality();
+                    int[] depth = layerCompound.contains("depth") ? UInts.readNbt(layerCompound.get("depth"), cardinality).getUnmasked(found) : DEFAULT_ARRAY;
+                    int[] block = Objects.requireNonNullElse(UInts.remap(UInts.readNbt(layerCompound.get("block"), cardinality), (i) -> blocks.indexOf(regionBlocks[i]), 0, cardinality), new UInt(0)).getUnmasked(found);
+                    int[] biome = Objects.requireNonNullElse(UInts.remap(UInts.readNbt(layerCompound.get("biome"), cardinality), (i) -> biomes.indexOf(regionBiomes[i]), 0, cardinality), new UInt(0)).getUnmasked(found);
+                    int[] light = layerCompound.contains("light") ? UInts.readNbt(layerCompound.get("light"), cardinality).getUnmasked(found) : DEFAULT_ARRAY;
+                    int[] water = layerCompound.contains("water") ? UInts.readNbt(layerCompound.get("water"), cardinality).getUnmasked(found) : DEFAULT_ARRAY;
                     layers.get(Integer.parseInt(layer)).layer().putChunk((regionPos.x - minRegionX) * 32 + regionChunkX, (regionPos.z - minRegionZ) * 32 + regionChunkZ, found, depth, block, biome, light, water);
                 }
             }
@@ -149,40 +149,6 @@ public class SurveyorSurveyor {
                 throw new RuntimeException(e);
             }
         });
-    }
-
-    public static int[] unmaskUInts(int[] array, BitSet mask) {
-        if (array.length == mask.size()) return array;
-        int[] newArray = new int[mask.size()];
-        int maskedIndex = 0;
-        for (int i = 0; i < mask.size(); i++) {
-            if (mask.get(i)) {
-                newArray[i] = array[maskedIndex];
-                maskedIndex++;
-            }
-        }
-        return newArray;
-    }
-
-    public static int[] extendUInts(int[] varArray, int defaultValue) {
-        if (varArray.length == 256) return varArray;
-        int[] outArray = ofSingle(defaultValue, 256);
-        System.arraycopy(varArray, 0, outArray, 0, varArray.length);
-        return outArray;
-    }
-
-    public static int[] readVarUInts(Tag nbt, int defaultValue) {
-        if (nbt == null) return ofSingle(defaultValue, 256);
-        if (nbt.getClass().equals(ByteTag.class)) {
-            return ofSingle(((ByteTag) nbt).getValue().intValue() + UINT_OFFSET, 256);
-        } else if (nbt.getClass().equals(ByteArrayTag.class)) {
-            return byteToInt(((ByteArrayTag) nbt).getValue());
-        } else if (nbt.getClass().equals(IntTag.class)) {
-            return ofSingle(((IntTag) nbt).getValue(), 256);
-        } else if (nbt.getClass().equals(IntArrayTag.class)) {
-            return ((IntArrayTag) nbt).getValue();
-        }
-        throw new IllegalStateException("Unexpected value: " + nbt.getClass());
     }
 
     public static int applyBrightnessRGB(Brightness brightness, int color) {
@@ -231,36 +197,6 @@ public class SurveyorSurveyor {
         int b = (int) ((b1 * iRatio) + (b2 * ratio));
 
         return a << 24 | r << 16 | g << 8 | b;
-    }
-
-    static <T> int[] remapping(List<T> list, T[] array)
-    {
-        int[] outArray = new int[array.length];
-        for (int i = 0; i < array.length; i++) {
-            outArray[i] = list.indexOf(array[i]);
-        }
-        return outArray;
-    }
-
-    static void remap(int[] values, int[] remapping)
-    {
-        for (int i = 0; i < values.length; i++) {
-            values[i] = remapping[values[i]];
-        }
-    }
-    public static int[] ofSingle(int value, int size) {
-        int[] array = new int[size];
-        Arrays.fill(array, value);
-        return array;
-    }
-
-    public static int[] byteToInt(byte[] array)
-    {
-        int[] outArray = new int[array.length];
-        for (int i = 0; i < array.length; i++) {
-           outArray[i] = array[i] + UINT_OFFSET;
-        }
-        return outArray;
     }
 
     /**

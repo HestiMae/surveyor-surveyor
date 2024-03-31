@@ -1,17 +1,16 @@
 plugins {
     id 'java'
     id 'application'
-    id 'com.github.johnrengelman.shadow' version '8.1.1'
+    id 'io.github.goooler.shadow' version '8.1.7'
 }
 
 group 'garden.hestia'
 version = "$project.baseVersion"
 
-sourceCompatibility = 17
-
 repositories {
     mavenCentral()
     maven { url "https://repo.opencollab.dev/maven-releases" }
+    maven { url "https://plugins.gradle.org/m2/" }
 }
 
 dependencies {
