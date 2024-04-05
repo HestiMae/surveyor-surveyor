@@ -54,40 +54,55 @@ public class Layer {
         for (int x = 0; x < width; x++) {
             for (int z = 0; z < height; z++) {
                 if (isEmpty(x, z)) continue;
-                int color = blockColors[block[x][z]];
-
-                SurveyorSurveyor.Brightness brightness = SurveyorSurveyor.Brightness.NORMAL;
-                if (water[x][z] > 0) {
-                    int waterColor = BIOME_WATER ? tint(WATER_TEXTURE_COLOR, biomeWater[biome[x][z]]) : applyBrightnessRGB(Brightness.LOWEST, WATER_MAP_COLOR);
-                    if (TRANSPARENT_WATER) {
-                        color = blend(color, waterColor, Math.min(0.7F + water[x][z] / 53.0F, 1.0F));
-                    } else {
-                        color = waterColor;
-                        brightness = getBrightnessFromDepth(water[x][z], x, z);
-
-                    }
+                // base block colour
+                int color;
+                if (!TRANSPARENT_WATER && water[x][z] > 0) {
+                    color = BIOME_WATER ? tint(WATER_TEXTURE_COLOR, biomeWater[biome[x][z]]) : applyBrightnessRGB(Brightness.LOWEST, WATER_MAP_COLOR);
+                } else if (BIOME_GRASS && GRASS_BLOCKS.contains(blocks[block[x][z]])) {
+                    color = SurveyorSurveyor.tint(GRASS_TEXTURE_COLOR, biomeGrass[biome[x][z]]);
+                } else if (BIOME_GRASS && GRASS_BLOCK_BLOCKS.contains(blocks[block[x][z]])) {
+                    color = SurveyorSurveyor.tint(GRASS_BLOCK_TEXTURE_COLOR, biomeGrass[biome[x][z]]);
+                } else if (BIOME_FOLIAGE && FOLIAGE_BLOCKS.contains(blocks[block[x][z]])) {
+                    color = SurveyorSurveyor.tint(FOLIAGE_TEXTURE_COLOR, biomeFoliage[biome[x][z]]);
+                } else if (BIOME_FOLIAGE && blocks[block[x][z]].equals("minecraft:birch_leaves")) {
+                    color = tint(FOLIAGE_TEXTURE_COLOR, BIRCH_MAP_COLOR);
+                } else if (BIOME_FOLIAGE && blocks[block[x][z]].equals("minecraft:spruce_leaves")) {
+                    color = tint(FOLIAGE_TEXTURE_COLOR, SPRUCE_MAP_COLOR);
+                } else if (BIOME_FOLIAGE && blocks[block[x][z]].equals("minecraft:mangrove_leaves")) {
+                    color = tint(FOLIAGE_TEXTURE_COLOR, MANGROVE_MAP_COLOR);
+                } else if (STONE_BLOCKS.contains(blocks[block[x][z]])) {
+                    color = STONE_MAP_COLOR;
                 } else {
-                    if (BIOME_GRASS && GRASS_BLOCKS.contains(blocks[block[x][z]])) {
-                        color = SurveyorSurveyor.tint(GRASS_TEXTURE_COLOR, biomeGrass[biome[x][z]]);
-                    } else if (BIOME_GRASS && GRASS_BLOCK_BLOCKS.contains(blocks[block[x][z]])) {
-                        color = SurveyorSurveyor.tint(GRASS_BLOCK_TEXTURE_COLOR, biomeGrass[biome[x][z]]);
-                    } else if (BIOME_FOLIAGE && FOLIAGE_BLOCKS.contains(blocks[block[x][z]])) {
-                        color = SurveyorSurveyor.tint(FOLIAGE_TEXTURE_COLOR, biomeFoliage[biome[x][z]]);
-                    } else if (BIOME_FOLIAGE && blocks[block[x][z]].equals("minecraft:birch_leaves")) {
-                        color = tint(FOLIAGE_TEXTURE_COLOR, BIRCH_MAP_COLOR);
-                    } else if (BIOME_FOLIAGE && blocks[block[x][z]].equals("minecraft:spruce_leaves")) {
-                        color = tint(FOLIAGE_TEXTURE_COLOR, SPRUCE_MAP_COLOR);
-                    } else if (BIOME_FOLIAGE && blocks[block[x][z]].equals("minecraft:mangrove_leaves")) {
-                        color = tint(FOLIAGE_TEXTURE_COLOR, MANGROVE_MAP_COLOR);
-                    } else if (STONE_BLOCKS.contains(blocks[block[x][z]])) {
-                        color = STONE_MAP_COLOR;
+                    color = blockColors[block[x][z]];
+                }
+
+                if (TOPOGRAPHY) {
+                    SurveyorSurveyor.Brightness brightness = SurveyorSurveyor.Brightness.NORMAL;
+                    if (!TRANSPARENT_WATER && water[x][z] > 0) {
+                        brightness = getBrightnessFromDepth(water[x][z], x, z);
                     }
                     if (z > 0) {
                         if (depth[x][z - 1] < depth[x][z]) brightness = SurveyorSurveyor.Brightness.LOW;
                         if (depth[x][z - 1] > depth[x][z]) brightness = SurveyorSurveyor.Brightness.HIGH;
                     }
+                    color = applyBrightnessRGB(brightness, color);
                 }
-                colors[x][z] = 0xFF000000 | applyBrightnessRGB(brightness, color);
+
+                if (LIGHTING) {
+                    int blockLight = light[x][z];
+                    int skyLight = Math.max(15 - water[x][z], 0);
+                    color = tint(color, LIGHTMAP[skyLight][blockLight]);
+                }
+                if (water[x][z] > 0 && TRANSPARENT_WATER) {
+                    int waterColor = BIOME_WATER ? tint(WATER_TEXTURE_COLOR, biomeWater[biome[x][z]]) : applyBrightnessRGB(Brightness.LOWEST, WATER_MAP_COLOR);
+                    if (LIGHTING) {
+                        int blockLight = light[x][z];
+                        int skyLight = 15;
+                        waterColor = tint(waterColor, LIGHTMAP[skyLight][blockLight]);
+                    }
+                    color = blend(color, waterColor, Math.min(0.7F + water[x][z] / 53.0F, 1.0F));
+                }
+                colors[x][z] = 0xFF000000 | color;
             }
         }
         return colors;

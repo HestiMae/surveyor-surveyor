@@ -3,6 +3,7 @@ package garden.hestia.surveyor_surveyor;
 import com.github.steveice10.opennbt.NBTIO;
 import com.github.steveice10.opennbt.tag.builtin.*;
 import garden.hestia.surveyor_surveyor.util.ArrayUtil;
+import garden.hestia.surveyor_surveyor.util.LightMapUtil;
 import garden.hestia.surveyor_surveyor.util.uints.UInt;
 import garden.hestia.surveyor_surveyor.util.uints.UInts;
 
@@ -27,6 +28,9 @@ public class SurveyorSurveyor {
     static final int GRASS_BLOCK_TEXTURE_COLOR = 0x959595;
     static final boolean BIOME_GRASS = true;
     static final boolean BIOME_FOLIAGE = true;
+    static final boolean LIGHTING = true;
+    static final boolean TOPOGRAPHY = true;
+    static final int[][] LIGHTMAP = LightMapUtil.NIGHT;
     static final int[] DEFAULT_ARRAY = ArrayUtil.ofSingle(0, 256);
     static final List<String> FOLIAGE_BLOCKS = List.of("minecraft:oak_leaves", "minecraft:jungle_leaves",
             "minecraft:acacia_leaves", "minecraft:dark_oak_leaves", "minecraft:mangrove_leaves", "minecraft:vine");
