@@ -14,7 +14,6 @@ import java.io.IOException;
 import java.util.*;
 
 public class SurveyorSurveyor {
-    public static final int UINT_OFFSET = 128;
     static final boolean BIOME_WATER = true;
     static final boolean TRANSPARENT_WATER = true;
     static final int WATER_MAP_COLOR = 0x4040ff;
@@ -121,7 +120,8 @@ public class SurveyorSurveyor {
                     int[] biome = Objects.requireNonNullElse(UInts.remap(UInts.readNbt(layerCompound.get("biome"), cardinality), (i) -> biomes.indexOf(regionBiomes[i]), 0, cardinality), new UInt(0)).getUnmasked(found);
                     int[] light = layerCompound.contains("light") ? UInts.readNbt(layerCompound.get("light"), cardinality).getUnmasked(found) : DEFAULT_ARRAY;
                     int[] water = layerCompound.contains("water") ? UInts.readNbt(layerCompound.get("water"), cardinality).getUnmasked(found) : DEFAULT_ARRAY;
-                    layers.get(Integer.parseInt(layer)).layer().putChunk((regionPos.x - minRegionX) * 32 + regionChunkX, (regionPos.z - minRegionZ) * 32 + regionChunkZ, found, depth, block, biome, light, water);
+                    int[] glint = layerCompound.contains("glint") ? UInts.readNbt(layerCompound.get("glint"), cardinality).getUnmasked(found) : DEFAULT_ARRAY;
+                    layers.get(Integer.parseInt(layer)).layer().putChunk((regionPos.x - minRegionX) * 32 + regionChunkX, (regionPos.z - minRegionZ) * 32 + regionChunkZ, found, depth, block, biome, light, water, glint);
                 }
             }
         }
