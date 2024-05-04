@@ -103,7 +103,7 @@ public class Layer {
                         int skyLight = SurveyorSurveyor.SKY_LIGHT;
                         waterColor = tint(waterColor, LIGHTMAP[skyLight][blockLight]);
                     }
-                    color = blend(color, waterColor, Math.min(0.7F + water[x][z] / 53.0F, 1.0F));
+                    color = blend(color, waterColor, 0.6F);
                 }
                 colors[x][z] = 0xFF000000 | color;
             }
