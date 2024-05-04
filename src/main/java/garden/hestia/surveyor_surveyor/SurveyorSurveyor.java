@@ -30,6 +30,7 @@ public class SurveyorSurveyor {
     static final boolean LIGHTING = true;
     static final boolean TOPOGRAPHY = true;
     static final int[][] LIGHTMAP = LightMapUtil.NIGHT;
+    static final int SKY_LIGHT = 15;
     static final int[] DEFAULT_ARRAY = ArrayUtil.ofSingle(0, 256);
     static final List<String> FOLIAGE_BLOCKS = List.of("minecraft:oak_leaves", "minecraft:jungle_leaves",
             "minecraft:acacia_leaves", "minecraft:dark_oak_leaves", "minecraft:mangrove_leaves", "minecraft:vine");

@@ -93,14 +93,14 @@ public class Layer {
 
                 if (LIGHTING) {
                     int blockLight = light[x][z];
-                    int skyLight = Math.max(15 - water[x][z], 0);
+                    int skyLight = Math.max(SurveyorSurveyor.SKY_LIGHT - water[x][z], 0);
                     color = tint(color, LIGHTMAP[skyLight][blockLight]);
                 }
                 if (water[x][z] > 0 && TRANSPARENT_WATER) {
                     int waterColor = BIOME_WATER ? tint(WATER_TEXTURE_COLOR, biomeWater[biome[x][z]]) : applyBrightnessRGB(Brightness.LOWEST, WATER_MAP_COLOR);
                     if (LIGHTING) {
                         int blockLight = glint[x][z];
-                        int skyLight = 15;
+                        int skyLight = SurveyorSurveyor.SKY_LIGHT;
                         waterColor = tint(waterColor, LIGHTMAP[skyLight][blockLight]);
                     }
                     color = blend(color, waterColor, Math.min(0.7F + water[x][z] / 53.0F, 1.0F));
