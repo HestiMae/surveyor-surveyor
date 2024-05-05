@@ -60,13 +60,13 @@ public class Layer {
                 // base block colour
                 int color;
                 if (!TRANSPARENT_WATER && water[x][z] > 0) {
-                    color = BIOME_WATER ? tint(WATER_TEXTURE_COLOR, biomeWater[biome[x][z]]) : applyBrightnessRGB(Brightness.LOWEST, WATER_MAP_COLOR);
+                    color = getWaterColor(biomeWater, x, z);
                 } else if (BIOME_GRASS && GRASS_BLOCKS.contains(blocks[block[x][z]])) {
-                    color = SurveyorSurveyor.tint(GRASS_TEXTURE_COLOR, biomeGrass[biome[x][z]]);
+                    color = SurveyorSurveyor.tint(GRASS_TEXTURE_COLOR, getBlendedBiomeColor(biomeGrass, x, z, BLEND_RADIUS));
                 } else if (BIOME_GRASS && GRASS_BLOCK_BLOCKS.contains(blocks[block[x][z]])) {
-                    color = SurveyorSurveyor.tint(GRASS_BLOCK_TEXTURE_COLOR, biomeGrass[biome[x][z]]);
+                    color = SurveyorSurveyor.tint(GRASS_BLOCK_TEXTURE_COLOR, getBlendedBiomeColor(biomeGrass, x, z, BLEND_RADIUS));
                 } else if (BIOME_FOLIAGE && FOLIAGE_BLOCKS.contains(blocks[block[x][z]])) {
-                    color = SurveyorSurveyor.tint(FOLIAGE_TEXTURE_COLOR, biomeFoliage[biome[x][z]]);
+                    color = SurveyorSurveyor.tint(FOLIAGE_TEXTURE_COLOR, getBlendedBiomeColor(biomeFoliage, x, z, BLEND_RADIUS));
                 } else if (BIOME_FOLIAGE && blocks[block[x][z]].equals("minecraft:birch_leaves")) {
                     color = tint(FOLIAGE_TEXTURE_COLOR, BIRCH_MAP_COLOR);
                 } else if (BIOME_FOLIAGE && blocks[block[x][z]].equals("minecraft:spruce_leaves")) {
@@ -97,7 +97,7 @@ public class Layer {
                     color = tint(color, LIGHTMAP[skyLight][blockLight]);
                 }
                 if (water[x][z] > 0 && TRANSPARENT_WATER) {
-                    int waterColor = BIOME_WATER ? tint(WATER_TEXTURE_COLOR, biomeWater[biome[x][z]]) : applyBrightnessRGB(Brightness.LOWEST, WATER_MAP_COLOR);
+                    int waterColor = getWaterColor(biomeWater, x, z);
                     if (LIGHTING) {
                         int blockLight = glint[x][z];
                         int skyLight = SurveyorSurveyor.SKY_LIGHT;
@@ -109,6 +109,34 @@ public class Layer {
             }
         }
         return colors;
+    }
+
+    private int getWaterColor(int[] biomeWater, int x, int z) {
+        if (BLEND_RADIUS != 0)
+        {
+            return tint(WATER_TEXTURE_COLOR, getBlendedBiomeColor(biomeWater, x, z, BLEND_RADIUS));
+        }
+        return BIOME_WATER ? tint(WATER_TEXTURE_COLOR, biomeWater[biome[x][z]]) : applyBrightnessRGB(Brightness.LOWEST, WATER_MAP_COLOR);
+    }
+
+    private int getBlendedBiomeColor(int[] array , int x, int z, int radius)
+    {
+        if (radius == 0) return array[biome[x][z]];
+
+        long r = 0;
+        long g = 0;
+        long b = 0;
+        int num = 0;
+        for (int i = x - radius; i < x + radius; i++) {
+            for (int j = z - radius; j < z + radius; j++) {
+                if (i < 0 || j < 0 || i >= biome.length || j >= biome[0].length || (x-i) * (x-i) + (z-j) * (z-j) > radius * radius) continue;
+                r += ((array[biome[i][j]] >> 16) & 0xFF) * (array[biome[i][j]] >> 16) & 0xFF;
+                g += ((array[biome[i][j]] >> 8) & 0xFF) * ((array[biome[i][j]] >> 8) & 0xFF);
+                b += ((array[biome[i][j]]) & 0xFF) * ((array[biome[i][j]]) & 0xFF);
+                num++;
+            }
+        }
+        return (int) Math.sqrt((double) r /num) << 16 | (int) Math.sqrt((double) g /num) << 8 | (int) Math.sqrt((double) b /num);
     }
 
     public void fillEmptyFloors(int depthOffset, int minDepth, int maxDepth, Layer layer) {

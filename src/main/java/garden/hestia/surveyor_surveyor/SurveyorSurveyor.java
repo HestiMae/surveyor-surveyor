@@ -15,6 +15,7 @@ import java.util.*;
 
 public class SurveyorSurveyor {
     static final boolean BIOME_WATER = true;
+    static final int BLEND_RADIUS = 7;
     static final boolean TRANSPARENT_WATER = true;
     static final int WATER_MAP_COLOR = 0x4040ff;
     static final int BIRCH_MAP_COLOR = 0x80a755;
@@ -29,7 +30,7 @@ public class SurveyorSurveyor {
     static final boolean BIOME_FOLIAGE = true;
     static final boolean LIGHTING = true;
     static final boolean TOPOGRAPHY = true;
-    static final int[][] LIGHTMAP = LightMapUtil.NIGHT;
+    static final int[][] LIGHTMAP = LightMapUtil.DAY;
     static final int SKY_LIGHT = 15;
     static final int[] DEFAULT_ARRAY = ArrayUtil.ofSingle(0, 256);
     static final List<String> FOLIAGE_BLOCKS = List.of("minecraft:oak_leaves", "minecraft:jungle_leaves",

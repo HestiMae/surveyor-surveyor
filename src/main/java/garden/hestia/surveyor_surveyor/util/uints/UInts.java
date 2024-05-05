@@ -58,6 +58,7 @@ public interface UInts {
         if (uint <= MAX_SHORT) return UShort.ofInt(uint);
         return UInt.ofInt(uint);
     }
+
     UInts remap(Function<Integer, Integer> remapping, int defaultValue, int cardinality);
 
     static UInts remap(UInts input, Function<Integer, Integer> remapping, int defaultValue, int cardinality) {
