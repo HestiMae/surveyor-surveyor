@@ -12,6 +12,7 @@ public class Layer {
     public int[][] biome;
     public int[][] light;
     public int[][] water;
+    public int[][] glint;
     public final int width;
     public final int height;
     public final int y;
@@ -23,12 +24,13 @@ public class Layer {
         biome = new int[width][height];
         light = new int[width][height];
         water = new int[width][height];
+        glint = new int[width][height];
         this.width = width;
         this.height = height;
         this.y = y;
     }
 
-    public void putChunk(int chunkX, int chunkZ, BitSet cFound, int[] cDepth, int[] cBlock, int[] cBiome, int[] cLight, int[] cWater) {
+    public void putChunk(int chunkX, int chunkZ, BitSet cFound, int[] cDepth, int[] cBlock, int[] cBiome, int[] cLight, int[] cWater, int[] cGlint) {
         for (int x = 0; x < 16; x++) {
             for (int z = 0; z < 16; z++) {
                 found.set((chunkX * 16 + x) * height + chunkZ * 16 + z, cFound.get(x * 16 + z));
@@ -37,6 +39,7 @@ public class Layer {
                 biome[chunkX * 16 + x][chunkZ * 16 + z] = cBiome[x * 16 + z];
                 light[chunkX * 16 + x][chunkZ * 16 + z] = cLight[x * 16 + z];
                 water[chunkX * 16 + x][chunkZ * 16 + z] = cWater[x * 16 + z];
+                glint[chunkX * 16 + x][chunkZ * 16 + z] = cGlint[x * 16 + z];
             }
         }
     }
@@ -90,17 +93,17 @@ public class Layer {
 
                 if (LIGHTING) {
                     int blockLight = light[x][z];
-                    int skyLight = Math.max(15 - water[x][z], 0);
+                    int skyLight = Math.max(SurveyorSurveyor.SKY_LIGHT - water[x][z], 0);
                     color = tint(color, LIGHTMAP[skyLight][blockLight]);
                 }
                 if (water[x][z] > 0 && TRANSPARENT_WATER) {
                     int waterColor = BIOME_WATER ? tint(WATER_TEXTURE_COLOR, biomeWater[biome[x][z]]) : applyBrightnessRGB(Brightness.LOWEST, WATER_MAP_COLOR);
                     if (LIGHTING) {
-                        int blockLight = light[x][z];
-                        int skyLight = 15;
+                        int blockLight = glint[x][z];
+                        int skyLight = SurveyorSurveyor.SKY_LIGHT;
                         waterColor = tint(waterColor, LIGHTMAP[skyLight][blockLight]);
                     }
-                    color = blend(color, waterColor, Math.min(0.7F + water[x][z] / 53.0F, 1.0F));
+                    color = blend(color, waterColor, 0.6F);
                 }
                 colors[x][z] = 0xFF000000 | color;
             }
@@ -118,6 +121,7 @@ public class Layer {
                     this.biome[x][z] = layer.biome[x][z];
                     this.light[x][z] = layer.light[x][z];
                     this.water[x][z] = layer.water[x][z];
+                    this.glint[x][z] = layer.glint[x][z];
                 }
             }
         }
@@ -131,6 +135,7 @@ public class Layer {
         newLayer.biome = Arrays.stream(biome).map(int[]::clone).toArray(int[][]::new);
         newLayer.light = Arrays.stream(light).map(int[]::clone).toArray(int[][]::new);
         newLayer.water = Arrays.stream(water).map(int[]::clone).toArray(int[][]::new);
+        newLayer.glint = Arrays.stream(glint).map(int[]::clone).toArray(int[][]::new);
         return newLayer;
     }
 }
